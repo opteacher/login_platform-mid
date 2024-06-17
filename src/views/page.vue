@@ -8,30 +8,41 @@
               <template #prefix><RightOutlined /></template>
               <template #clearIcon><CloseCircleFilled @click="onFmUrlClear" /></template>
             </a-input>
-            <a-button @click="onPageUpdate">
+            <a-button @click="onPageUpdate" :loading="collecting">
               <template #icon><SendOutlined /></template>
               跳转
             </a-button>
           </a-input-group>
-          <a-button type="primary">保存</a-button>
+          <a-button type="primary" :disabled="collecting">保存</a-button>
         </div>
       </a-layout-header>
       <a-layout>
         <a-layout-content class="relative">
-          <iframe class="w-full h-full border-none" :src="curUrl" />
+          <a-spin tip="页面元素收集中..." :spinning="collecting">
+            <iframe class="w-full h-full border-none" :src="curUrl" />
+          </a-spin>
           <div v-if="locEleMod" class="absolute top-0 bottom-0 left-0 right-0" />
         </a-layout-content>
         <a-layout-sider theme="light" :width="300" class="flex flex-col p-3 space-y-2">
           <a-space>
-            <a-button :type="locEleMod ? 'primary' : 'text'" @click="onLocEleClick">
+            <a-button
+              :type="locEleMod ? 'primary' : 'text'"
+              :disabled="collecting"
+              @click="onLocEleClick"
+            >
               <template #icon><AimOutlined /></template>
             </a-button>
           </a-space>
-          <a-list :data-source="form.slots">
+          <!-- <a-list :data-source="page.els">
             <template #renderItem="{ item }">
-              <a-list-item>{{ item }}</a-list-item>
+              <a-list-item>{{ item.xpath }}</a-list-item>
             </template>
-          </a-list>
+          </a-list> -->
+          <a-tree
+            :expanded-keys="page.expdKeys"
+            :auto-expand-parent="true"
+            :tree-data="page.treeData"
+          ></a-tree>
         </a-layout-sider>
       </a-layout>
     </a-layout>
@@ -43,15 +54,28 @@ import MainLayout from '@/layouts/main.vue'
 import { SendOutlined, RightOutlined, CloseCircleFilled, AimOutlined } from '@ant-design/icons-vue'
 import { reactive, ref } from 'vue'
 import pgAPI from '@/apis/page'
+import { TreeProps } from 'ant-design-vue'
 
 const form = reactive<{ url: string; slots: any[] }>({ url: '', slots: [] })
+const page = reactive<{
+  els: { xpath: string; tagName: string; rectBox: DOMRect }[]
+  treeData: TreeProps['treeData']
+  expdKeys: (string | number)[]
+}>({
+  els: [],
+  treeData: [],
+  expdKeys: []
+})
 const curUrl = ref('')
 const locEleMod = ref(false)
+const collecting = ref(false)
 
 async function onPageUpdate() {
+  collecting.value = true
   curUrl.value = form.url
-  const resp = await pgAPI.colcElements(curUrl.value)
-  console.log(resp.data)
+  const result = await pgAPI.colcElements(curUrl.value)
+  page.els.splice(0, page.els.length, ...result)
+  collecting.value = false
 }
 function onFmUrlClear() {
   curUrl.value = ''
