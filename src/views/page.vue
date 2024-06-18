@@ -39,7 +39,6 @@
             </template>
           </a-list> -->
           <a-tree
-            :expanded-keys="page.expdKeys"
             :auto-expand-parent="true"
             :tree-data="page.treeData"
           ></a-tree>
@@ -74,7 +73,9 @@ async function onPageUpdate() {
   collecting.value = true
   curUrl.value = form.url
   const result = await pgAPI.colcElements(curUrl.value)
-  page.els.splice(0, page.els.length, ...result)
+  page.els = result.elements
+  page.treeData = result.treeData
+  console.log(page.treeData)
   collecting.value = false
 }
 function onFmUrlClear() {
