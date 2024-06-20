@@ -1,5 +1,5 @@
 <template>
-  <a-layout class="h-full">
+  <a-layout class="h-full overflow-y-hidden">
     <a-layout-header class="pl-0 pr-5 flex">
       <div class="h-full p-2.5 bg-white" style="width: 200px">
         <div class="h-full bg-gray-300 rounded-sm" />

@@ -16,8 +16,8 @@
           <a-button type="primary" :disabled="collecting">保存</a-button>
         </div>
       </a-layout-header>
-      <a-layout>
-        <a-layout-content class="relative">
+      <a-layout class="space-x-3">
+        <a-layout-content>
           <a-spin tip="页面元素收集中..." :spinning="collecting">
             <iframe
               class="w-full h-full border-none"
@@ -25,29 +25,32 @@
               ref="dspPage"
               @load="onPageLoad"
             />
-            <svg
-              class="absolute overflow-auto"
-              :style="{ width: dspRect.width + 'px', height: dspRect.height + 'px' }"
+            <div
+              class="absolute left-0 right-0 overflow-y-scroll"
+              :style="{ height: dspRect.height + 'px' }"
+              @scroll="onPageScroll"
             >
-              <rect
-                v-if="selRect.width"
-                :x="selRect.x"
-                :y="selRect.y"
-                :rx="4"
-                :ry="4"
-                :width="selRect.width"
-                :height="selRect.height"
-                :style="{
-                  'fill-opacity': 0,
-                  'stroke-width': 3,
-                  stroke: operas.stkColor
-                }"
-              />
-            </svg>
+              <svg class="w-full" :style="{ height: dspRect.sclHgt + 'px' }">
+                <rect
+                  v-if="selRect.width"
+                  :x="selRect.x"
+                  :y="selRect.y"
+                  :rx="4"
+                  :ry="4"
+                  :width="selRect.width"
+                  :height="selRect.height"
+                  :style="{
+                    'fill-opacity': 0,
+                    'stroke-width': 3,
+                    stroke: operas.stkColor
+                  }"
+                />
+              </svg>
+            </div>
           </a-spin>
           <div v-if="operas.locEleMod" class="absolute top-0 bottom-0 left-0 right-0" />
         </a-layout-content>
-        <a-layout-sider theme="light" :width="300" class="p-3 space-y-2 relative overflow-hidden">
+        <a-layout-sider theme="light" :width="300" class="space-y-2">
           <a-space>
             <a-button
               :type="operas.locEleMod ? 'primary' : 'text'"
@@ -56,7 +59,11 @@
             >
               <template #icon><AimOutlined /></template>
             </a-button>
-            <a-button type="text" @click="() => setProp(operas, 'stkClrVsb', true)">
+            <a-button
+              type="text"
+              :disabled="collecting"
+              @click="() => setProp(operas, 'stkClrVsb', true)"
+            >
               <template #icon>
                 <icon :style="{ color: operas.stkColor }">
                   <template #component>
@@ -75,18 +82,21 @@
               <ColorSelect v-model:color="operas.stkColor" />
             </a-modal>
           </a-space>
-          <a-tree
-            class="overflow-auto absolute left-0 bottom-0 top-14 right-0"
-            :auto-expand-parent="true"
-            :tree-data="page.treeData"
-            v-model:selectedKeys="page.selKeys"
-            @select="onTreeSelect"
-          >
-            <template #title="{ dataRef }">
-              {{ dataRef.element ? dataRef.element.tagName : dataRef.title }}&nbsp;
-              <span v-if="dataRef.element">.{{ dataRef.element.clazz }}</span>
-            </template>
-          </a-tree>
+          <a-spin tip="页面元素收集中..." :spinning="collecting">
+            <a-tree
+              class="overflow-auto absolute left-0 bottom-9 top-0 right-0"
+              :auto-expand-parent="true"
+              :tree-data="page.treeData"
+              v-model:selectedKeys="page.selKeys"
+            >
+              <template #title="{ dataRef }">
+                {{ dataRef.element ? dataRef.element.tagName : dataRef.title }}&nbsp;
+                <span v-if="dataRef.element && dataRef.element.clazz">
+                  .{{ dataRef.element.clazz }}
+                </span>
+              </template>
+            </a-tree>
+          </a-spin>
         </a-layout-sider>
       </a-layout>
     </a-layout>
@@ -101,7 +111,7 @@ import Icon, {
   CloseCircleFilled,
   AimOutlined
 } from '@ant-design/icons-vue'
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref } from 'vue'
 import pgAPI from '@/apis/page'
 import { TreeProps } from 'ant-design-vue'
 import ColorSelect from '@lib/components/ColorSelect.vue'
@@ -121,12 +131,12 @@ type PageEle = {
 
 const form = reactive<{ url: string; slots: any[] }>({ url: 'http://192.168.1.12:8096', slots: [] })
 const page = reactive<{
-  els: Record<string, PageEle>
+  elMapper: Record<string, PageEle>
   treeData: TreeProps['treeData']
   expdKeys: (string | number)[]
   selKeys: (string | number)[]
 }>({
-  els: {},
+  elMapper: {},
   treeData: [],
   expdKeys: [],
   selKeys: []
@@ -143,14 +153,18 @@ const operas = reactive<{
 })
 const collecting = ref(false)
 const dspPage = ref<HTMLIFrameElement | null>(null)
-const dspRect = reactive<{ width: number; height: number }>({ width: 0, height: 0 })
+const dspRect = reactive<{ width: number; height: number; sclWid: number; sclHgt: number }>({
+  width: 0,
+  height: 0,
+  sclWid: 0,
+  sclHgt: 0
+})
 const selRect = computed<RectBox>(() => {
   if (!page.selKeys.length) {
     return { x: 0, y: 0, width: 0, height: 0 }
   }
   const selKey = ((page.selKeys[0] as string).startsWith('*') ? '//' : '/') + page.selKeys[0]
-  const selEl = page.els[selKey]
-  console.log(selEl)
+  const selEl = page.elMapper[selKey]
   return {
     x: selEl.rectBox.x * dspRect.width,
     y: selEl.rectBox.y * dspRect.height,
@@ -163,10 +177,9 @@ async function onPageUpdate() {
   collecting.value = true
   curUrl.value = form.url
   const result = await pgAPI.colcElements(curUrl.value)
-  page.els = Object.fromEntries(result.elements.map((el: any) => [el.xpath, el]))
-  console.log(page.els)
+  page.elMapper = Object.fromEntries(result.elements.map((el: any) => [el.xpath, el]))
   page.treeData = result.treeData
-  console.log(page.treeData)
+  page.selKeys = []
   collecting.value = false
 }
 function onFmUrlClear() {
@@ -176,14 +189,35 @@ function onLocEleClick() {
   operas.locEleMod = !operas.locEleMod
 }
 function onPageLoad() {
-  const aWindow = dspPage.value?.contentWindow
-  dspRect.width =
-    aWindow?.document.documentElement.scrollWidth || aWindow?.document.body.scrollWidth || 0
-  dspRect.height =
-    aWindow?.document.documentElement.scrollHeight || aWindow?.document.body.scrollHeight || 0
+  try {
+    dspRect.width = dspPage.value?.clientWidth as number
+    dspRect.height = dspPage.value?.clientHeight as number
+    const doc = dspPage.value?.contentDocument || window.document
+    dspRect.sclWid = Math.max(
+      doc.body.clientWidth,
+      doc.documentElement.clientWidth,
+      doc.body.scrollWidth,
+      doc.documentElement.scrollWidth
+    )
+    dspRect.sclHgt = Math.max(
+      doc.body.clientHeight,
+      doc.documentElement.clientHeight,
+      doc.body.scrollHeight,
+      doc.documentElement.scrollHeight
+    )
+    console.log(dspRect.sclHgt)
+  } catch (e) {
+    console.error(e)
+  }
 }
-function onTreeSelect(selKeys: string[]) {
-  console.log(selKeys)
+function onPageScroll(e: Event) {
+  nextTick(() => {
+    dspPage.value?.contentWindow?.scrollTo({
+      top: (e.target as any).scrollTop,
+      behavior: 'smooth'
+    })
+    console.log(dspPage.value?.contentDocument?.body.scrollTop)
+  })
 }
 </script>
 
@@ -191,5 +225,9 @@ function onTreeSelect(selKeys: string[]) {
 .ant-tree-title {
   word-break: keep-all !important;
   white-space: nowrap !important;
+}
+
+.ant-spin-container {
+  position: relative !important;
 }
 </style>
