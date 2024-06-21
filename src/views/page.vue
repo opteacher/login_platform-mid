@@ -166,17 +166,20 @@ const selRect = computed<RectBox>(() => {
   const selKey = ((page.selKeys[0] as string).startsWith('*') ? '//' : '/') + page.selKeys[0]
   const selEl = page.elMapper[selKey]
   return {
-    x: selEl.rectBox.x * dspRect.width,
-    y: selEl.rectBox.y * dspRect.height,
-    width: selEl.rectBox.w * dspRect.width,
-    height: selEl.rectBox.h * dspRect.height
+    x: selEl.rectBox.x,
+    y: selEl.rectBox.y,
+    width: selEl.rectBox.w,
+    height: selEl.rectBox.h
   }
 })
 
 async function onPageUpdate() {
   collecting.value = true
   curUrl.value = form.url
-  const result = await pgAPI.colcElements(curUrl.value)
+  const result = await pgAPI.colcElements(
+    curUrl.value,
+    dspPage.value?.getBoundingClientRect() as DOMRect
+  )
   page.elMapper = Object.fromEntries(result.elements.map((el: any) => [el.xpath, el]))
   page.treeData = result.treeData
   page.selKeys = []
