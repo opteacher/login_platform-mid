@@ -5,6 +5,6 @@ export default {
     reqGet('page', 'element/s', {
       type: 'api',
       action: 'collect',
-      axiosConfig: { params: { url, width: Math.floor(width), height: Math.floor(height) } }
+      axiosConfig: { params: { url, width: Math.round(width), height: Math.round(height) } }
     })
 }

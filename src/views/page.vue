@@ -26,9 +26,10 @@
               @load="onPageLoad"
             />
             <div
-              class="absolute left-0 right-0 overflow-y-scroll"
+              class="absolute left-0 right-0"
               :style="{ height: dspRect.height + 'px' }"
               @scroll="onPageScroll"
+              @mousemove="onMouseMove"
             >
               <svg class="w-full" :style="{ height: dspRect.sclHgt + 'px' }">
                 <rect
@@ -48,7 +49,6 @@
               </svg>
             </div>
           </a-spin>
-          <div v-if="operas.locEleMod" class="absolute top-0 bottom-0 left-0 right-0" />
         </a-layout-content>
         <a-layout-sider theme="light" :width="300" class="space-y-2">
           <a-space>
@@ -116,17 +116,13 @@ import pgAPI from '@/apis/page'
 import { TreeProps } from 'ant-design-vue'
 import ColorSelect from '@lib/components/ColorSelect.vue'
 import { setProp } from '@lib/utils'
+import { RectBox, inRect } from '@/utils'
 
-type RectBox = {
-  x: number
-  y: number
-  width: number
-  height: number
-}
+
 type PageEle = {
   xpath: string
   tagName: string
-  rectBox: { x: number; y: number; w: number; h: number }
+  rectBox: RectBox
 }
 
 const form = reactive<{ url: string; slots: any[] }>({ url: 'http://192.168.1.12:8096', slots: [] })
@@ -164,13 +160,7 @@ const selRect = computed<RectBox>(() => {
     return { x: 0, y: 0, width: 0, height: 0 }
   }
   const selKey = ((page.selKeys[0] as string).startsWith('*') ? '//' : '/') + page.selKeys[0]
-  const selEl = page.elMapper[selKey]
-  return {
-    x: selEl.rectBox.x,
-    y: selEl.rectBox.y,
-    width: selEl.rectBox.w,
-    height: selEl.rectBox.h
-  }
+  return page.elMapper[selKey].rectBox
 })
 
 async function onPageUpdate() {
@@ -221,6 +211,18 @@ function onPageScroll(e: Event) {
     })
     console.log(dspPage.value?.contentDocument?.body.scrollTop)
   })
+}
+function onMouseMove(e: MouseEvent) {
+  e.preventDefault()
+  if (operas.locEleMod) {
+    for (const el of Object.values(page.elMapper)) {
+      if (inRect({ x: e.offsetX, y: e.offsetY }, el.rectBox)) {
+        console.log(el.xpath)
+        page.selKeys.splice(0, page.selKeys.length, el.xpath)
+        break
+      }
+    }
+  }
 }
 </script>
 
