@@ -53,54 +53,63 @@
           </a-spin>
         </a-layout-content>
         <a-layout-sider theme="light" :width="300" class="space-y-2">
-          <a-space>
-            <a-button
-              :type="operas.locEleMod ? 'primary' : 'text'"
-              :disabled="collecting"
-              @click="onLocEleClick"
-            >
-              <template #icon><AimOutlined /></template>
-            </a-button>
-            <a-button
-              type="text"
-              :disabled="collecting"
-              @click="() => setProp(operas, 'stkClrVsb', true)"
-            >
-              <template #icon>
-                <icon :style="{ color: operas.stkColor }">
-                  <template #component>
-                    <svg width="1em" height="1em" fill="currentColor" viewBox="0 0 1024 1024">
-                      <rect :x="0" :y="0" :width="1024" :height="1024" :rx="20" :ry="20" />
-                    </svg>
-                  </template>
-                </icon>
-              </template>
-            </a-button>
-            <a-button
-              v-if="page.selKeys.length"
-              type="text"
-              @click="() => setProp(page, 'selKeys', [])"
-            >
-              <template #icon><CloseOutlined /></template>
-            </a-button>
-          </a-space>
-          <a-spin tip="页面元素收集中..." :spinning="collecting">
-            <a-tree
-              class="overflow-auto absolute left-0 bottom-9 top-0 right-0"
-              :auto-expand-parent="true"
-              :tree-data="page.treeData"
-              v-model:expendedKeys="page.expKeys"
-              v-model:selectedKeys="page.selKeys"
-            >
-              <template #title="{ dataRef }">
-                {{ dataRef.element ? dataRef.element.tagName : dataRef.title }}&nbsp;
-                <template v-if="dataRef.element">
-                  <span v-if="dataRef.element.id">#{{ dataRef.element.id }}</span>
-                  <span v-else-if="dataRef.element.clazz">.{{ dataRef.element.clazz }}</span>
+          <div class="h-full flex flex-col">
+            <a-space>
+              <a-button
+                :type="operas.locEleMod ? 'primary' : 'text'"
+                :disabled="collecting"
+                @click="onLocEleClick"
+              >
+                <template #icon><AimOutlined /></template>
+              </a-button>
+              <a-button
+                type="text"
+                :disabled="collecting"
+                @click="() => setProp(operas, 'stkClrVsb', true)"
+              >
+                <template #icon>
+                  <icon :style="{ color: operas.stkColor }">
+                    <template #component>
+                      <svg width="1em" height="1em" fill="currentColor" viewBox="0 0 1024 1024">
+                        <rect :x="0" :y="0" :width="1024" :height="1024" :rx="20" :ry="20" />
+                      </svg>
+                    </template>
+                  </icon>
                 </template>
-              </template>
-            </a-tree>
-          </a-spin>
+              </a-button>
+            </a-space>
+            <a-spin wrapperClassName="flex-1" tip="页面元素收集中..." :spinning="collecting">
+              <a-tree
+                class="overflow-auto absolute top-0 bottom-0 left-0 right-0"
+                :auto-expand-parent="true"
+                :tree-data="page.treeData"
+                v-model:expendedKeys="page.expKeys"
+                v-model:selectedKeys="page.selKeys"
+              >
+                <template #title="{ dataRef }">
+                  {{ dataRef.element ? dataRef.element.tagName : dataRef.title }}&nbsp;
+                  <template v-if="dataRef.element">
+                    <span v-if="dataRef.element.id">#{{ dataRef.element.id }}</span>
+                    <span v-else-if="dataRef.element.clazz">.{{ dataRef.element.clazz }}</span>
+                  </template>
+                </template>
+              </a-tree>
+            </a-spin>
+            <a-collapse v-if="page.selKeys.length" :activeKey="['1']" :bordered="false">
+              <a-collapse-panel key="1" header="填入元素">
+                <FormGroup
+                  layout="vertical"
+                  :mapper="slotMapper"
+                  :form="slotForm"
+                  :rules="{
+                    inValue: [{ required: true, message: '必须填入值！' }]
+                  }"
+                />
+                <a-button class="w-full" type="primary">提交</a-button>
+                <template #extra><CloseOutlined @click="() => setProp(page, 'selKeys', [])" /></template>
+              </a-collapse-panel>
+            </a-collapse>
+          </div>
         </a-layout-sider>
       </a-layout>
     </a-layout>
@@ -129,12 +138,31 @@ import { TreeProps } from 'ant-design-vue'
 import ColorSelect from '@lib/components/ColorSelect.vue'
 import { setProp } from '@lib/utils'
 import { RectBox, inRect } from '@/utils'
+import FormGroup from '@lib/components/FormGroup.vue'
+import Mapper from '@lib/types/mapper'
 
 type PageEle = {
   xpath: string
   tagName: string
   rectBox: RectBox
 }
+const slotMapper = new Mapper({
+  inType: {
+    label: '填入方式',
+    type: 'Select',
+    options: [{
+      label: '输入',
+      value: 'input'
+    }, {
+      label: '选择',
+      value: 'select'
+    }]
+  },
+  inValue: {
+    label: '填入值',
+    type: 'Input'
+  }
+})
 
 const form = reactive<{ url: string; slots: any[] }>({
   url: 'http://218.242.30.111:8096',
@@ -174,6 +202,10 @@ const selRect = computed<RectBox>(() => {
     return { x: 0, y: 0, width: 0, height: 0 }
   }
   return page.elMapper[page.selKeys[0]].rectBox
+})
+const slotForm = reactive({
+  inType: 'input',
+  inValue: ''
 })
 
 async function onPageUpdate() {
