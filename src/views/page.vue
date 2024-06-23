@@ -16,7 +16,7 @@
           <a-button type="primary" :disabled="collecting">保存</a-button>
         </div>
       </a-layout-header>
-      <a-layout class="space-x-3">
+      <a-layout class="space-x-3 bg-white">
         <a-layout-content>
           <a-spin tip="页面元素收集中..." :spinning="collecting">
             <iframe
@@ -30,6 +30,8 @@
               :style="{ height: dspRect.height + 'px' }"
               @scroll="onPageScroll"
               @mousemove="onMouseMove"
+              @click="() => setProp(operas, 'locEleMod', false)"
+              @mouseup="onMouseUp"
             >
               <svg class="w-full" :style="{ height: dspRect.sclHgt + 'px' }">
                 <rect
@@ -74,26 +76,28 @@
                 </icon>
               </template>
             </a-button>
-            <a-modal
-              v-model:open="operas.stkClrVsb"
-              title="选择框颜色"
-              @ok="() => setProp(operas, 'stkClrVsb', false)"
+            <a-button
+              v-if="page.selKeys.length"
+              type="text"
+              @click="() => setProp(page, 'selKeys', [])"
             >
-              <ColorSelect v-model:color="operas.stkColor" />
-            </a-modal>
+              <template #icon><CloseOutlined /></template>
+            </a-button>
           </a-space>
           <a-spin tip="页面元素收集中..." :spinning="collecting">
             <a-tree
               class="overflow-auto absolute left-0 bottom-9 top-0 right-0"
               :auto-expand-parent="true"
               :tree-data="page.treeData"
+              v-model:expendedKeys="page.expKeys"
               v-model:selectedKeys="page.selKeys"
             >
               <template #title="{ dataRef }">
                 {{ dataRef.element ? dataRef.element.tagName : dataRef.title }}&nbsp;
-                <span v-if="dataRef.element && dataRef.element.clazz">
-                  .{{ dataRef.element.clazz }}
-                </span>
+                <template v-if="dataRef.element">
+                  <span v-if="dataRef.element.id">#{{ dataRef.element.id }}</span>
+                  <span v-else-if="dataRef.element.clazz">.{{ dataRef.element.clazz }}</span>
+                </template>
               </template>
             </a-tree>
           </a-spin>
@@ -101,6 +105,13 @@
       </a-layout>
     </a-layout>
   </MainLayout>
+  <a-modal
+    v-model:open="operas.stkClrVsb"
+    title="选择框颜色"
+    @ok="() => setProp(operas, 'stkClrVsb', false)"
+  >
+    <ColorSelect v-model:color="operas.stkColor" />
+  </a-modal>
 </template>
 
 <script setup lang="ts">
@@ -109,7 +120,8 @@ import Icon, {
   SendOutlined,
   RightOutlined,
   CloseCircleFilled,
-  AimOutlined
+  AimOutlined,
+  CloseOutlined
 } from '@ant-design/icons-vue'
 import { computed, nextTick, reactive, ref } from 'vue'
 import pgAPI from '@/apis/page'
@@ -118,23 +130,25 @@ import ColorSelect from '@lib/components/ColorSelect.vue'
 import { setProp } from '@lib/utils'
 import { RectBox, inRect } from '@/utils'
 
-
 type PageEle = {
   xpath: string
   tagName: string
   rectBox: RectBox
 }
 
-const form = reactive<{ url: string; slots: any[] }>({ url: 'http://192.168.1.12:8096', slots: [] })
+const form = reactive<{ url: string; slots: any[] }>({
+  url: 'http://218.242.30.111:8096',
+  slots: []
+})
 const page = reactive<{
   elMapper: Record<string, PageEle>
   treeData: TreeProps['treeData']
-  expdKeys: (string | number)[]
+  expKeys: (string | number)[]
   selKeys: (string | number)[]
 }>({
   elMapper: {},
   treeData: [],
-  expdKeys: [],
+  expKeys: [],
   selKeys: []
 })
 const curUrl = ref('')
@@ -159,8 +173,7 @@ const selRect = computed<RectBox>(() => {
   if (!page.selKeys.length) {
     return { x: 0, y: 0, width: 0, height: 0 }
   }
-  const selKey = ((page.selKeys[0] as string).startsWith('*') ? '//' : '/') + page.selKeys[0]
-  return page.elMapper[selKey].rectBox
+  return page.elMapper[page.selKeys[0]].rectBox
 })
 
 async function onPageUpdate() {
@@ -214,14 +227,33 @@ function onPageScroll(e: Event) {
 }
 function onMouseMove(e: MouseEvent) {
   e.preventDefault()
-  if (operas.locEleMod) {
-    for (const el of Object.values(page.elMapper)) {
-      if (inRect({ x: e.offsetX, y: e.offsetY }, el.rectBox)) {
-        console.log(el.xpath)
-        page.selKeys.splice(0, page.selKeys.length, el.xpath)
-        break
-      }
+  if (!operas.locEleMod) {
+    return
+  }
+  const els = []
+  for (const el of Object.values(page.elMapper)) {
+    if (inRect({ x: e.offsetX, y: e.offsetY }, el.rectBox)) {
+      els.push(el)
     }
+  }
+  const minRect = {
+    width: Number.MAX_VALUE,
+    height: Number.MAX_VALUE,
+    el: null as PageEle | null
+  }
+  for (const el of els) {
+    if (el.rectBox.width < minRect.width && el.rectBox.height < minRect.height) {
+      minRect.el = el
+    }
+  }
+  if (minRect.el) {
+    page.selKeys = [minRect.el.xpath]
+  }
+}
+function onMouseUp(e: MouseEvent) {
+  if (e.button === 2) {
+    e.preventDefault()
+    page.selKeys = []
   }
 }
 </script>
