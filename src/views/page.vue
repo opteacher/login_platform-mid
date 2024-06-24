@@ -4,7 +4,12 @@
       <a-layout-header class="bg-white">
         <div class="h-[64px] flex space-x-2.5 items-center">
           <a-input-group class="flex-1 flex" compact>
-            <a-input class="flex-1" allowClear v-model:value="form.url" @pressEnter="onPageUpdate">
+            <a-input
+              class="flex-1"
+              allowClear
+              v-model:value="page.form.url"
+              @pressEnter="onPageUpdate"
+            >
               <template #prefix><RightOutlined /></template>
               <template #clearIcon><CloseCircleFilled @click="onFmUrlClear" /></template>
             </a-input>
@@ -13,7 +18,7 @@
               跳转
             </a-button>
           </a-input-group>
-          <a-button type="primary" :disabled="collecting">保存</a-button>
+          <a-button type="primary" :disabled="collecting" @click="onPageSave">保存</a-button>
         </div>
       </a-layout-header>
       <a-layout class="space-x-3 bg-white">
@@ -25,31 +30,57 @@
               ref="dspPage"
               @load="onPageLoad"
             />
-            <div
-              class="absolute left-0 right-0"
-              :style="{ height: dspRect.height + 'px' }"
-              @scroll="onPageScroll"
-              @mousemove="onMouseMove"
-              @click="() => setProp(operas, 'locEleMod', false)"
-              @mouseup="onMouseUp"
-            >
-              <svg class="w-full" :style="{ height: dspRect.sclHgt + 'px' }">
-                <rect
-                  v-if="selRect.width"
-                  :x="selRect.x"
-                  :y="selRect.y"
-                  :rx="4"
-                  :ry="4"
-                  :width="selRect.width"
-                  :height="selRect.height"
-                  :style="{
-                    'fill-opacity': 0,
-                    'stroke-width': 3,
-                    stroke: operas.stkColor
-                  }"
-                />
-              </svg>
-            </div>
+            <a-dropdown :trigger="['contextmenu']">
+              <div
+                class="absolute left-0 right-0"
+                :style="{ height: dspRect.height + 'px' }"
+                @scroll="onPageScroll"
+                @mousemove="onMouseMove"
+                @click="() => setProp(operas, 'locEleMod', false)"
+                @mouseup="onMouseUp"
+              >
+                <svg class="w-full" :style="{ height: dspRect.sclHgt + 'px' }">
+                  <rect
+                    v-if="selRect.width"
+                    :x="selRect.x"
+                    :y="selRect.y"
+                    :rx="4"
+                    :ry="4"
+                    :width="selRect.width"
+                    :height="selRect.height"
+                    :style="{
+                      'fill-opacity': 0,
+                      'stroke-width': 3,
+                      stroke: operas.selStkColor
+                    }"
+                  />
+                  <rect
+                    v-for="slot in page.form.slots.filter(
+                      slot => !page.selKeys.includes(slot.xpath)
+                    )"
+                    class="cursor-pointer"
+                    :key="slot.xpath"
+                    :x="page.elMapper[slot.xpath].rectBox.x"
+                    :y="page.elMapper[slot.xpath].rectBox.y"
+                    :rx="4"
+                    :ry="4"
+                    :width="page.elMapper[slot.xpath].rectBox.width"
+                    :height="page.elMapper[slot.xpath].rectBox.height"
+                    :style="{
+                      'fill-opacity': 0,
+                      'stroke-width': 3,
+                      stroke: operas.slotStkColor
+                    }"
+                    @click="() => setProp(page, 'selKeys', [slot.xpath])"
+                  />
+                </svg>
+              </div>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item key="select">检查</a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </a-spin>
         </a-layout-content>
         <a-layout-sider theme="light" :width="300" class="space-y-2">
@@ -68,7 +99,7 @@
                 @click="() => setProp(operas, 'stkClrVsb', true)"
               >
                 <template #icon>
-                  <icon :style="{ color: operas.stkColor }">
+                  <icon :style="{ color: operas.selStkColor }">
                     <template #component>
                       <svg width="1em" height="1em" fill="currentColor" viewBox="0 0 1024 1024">
                         <rect :x="0" :y="0" :width="1024" :height="1024" :rx="20" :ry="20" />
@@ -95,18 +126,58 @@
                 </template>
               </a-tree>
             </a-spin>
-            <a-collapse v-if="page.selKeys.length" :activeKey="['1']" :bordered="false">
-              <a-collapse-panel key="1" header="填入元素">
+            <a-collapse v-model:activeKey="slotForm.actKey" :bordered="false">
+              <a-collapse-panel v-if="page.selKeys.length" key="1" :header="page.selKeys[0]">
                 <FormGroup
                   layout="vertical"
                   :mapper="slotMapper"
                   :form="slotForm"
                   :rules="{
-                    inValue: [{ required: true, message: '必须填入值！' }]
+                    value: [{ required: true, message: '必须填入值！' }]
                   }"
-                />
-                <a-button class="w-full" type="primary">提交</a-button>
-                <template #extra><CloseOutlined @click="() => setProp(page, 'selKeys', [])" /></template>
+                  @update:fprop="
+                    values => Object.entries(values).map(([k, v]) => setProp(slotForm, k, v))
+                  "
+                >
+                  <template #value="{ formState }">
+                    <a-input v-model:value="formState.value">
+                      <template #addonBefore>
+                        <a-button
+                          type="text"
+                          size="small"
+                          @click="() => setProp(formState, 'valEnc', !formState.valEnc)"
+                        >
+                          <template #icon>
+                            <LockOutlined v-if="formState.valEnc" />
+                            <UnlockOutlined v-else />
+                          </template>
+                        </a-button>
+                      </template>
+                    </a-input>
+                  </template>
+                </FormGroup>
+                <a-button class="w-full" type="primary" @click="onSlotSave">提交</a-button>
+                <template #extra>
+                  <CloseOutlined @click="() => setProp(page, 'selKeys', [])" />
+                </template>
+              </a-collapse-panel>
+              <a-collapse-panel v-else-if="page.form.slots.length" key="2">
+                <template #header>
+                  已关联槽&nbsp;
+                  <a-tag v-if="page.form.slots.length" color="#f50">
+                    {{ page.form.slots.length }}
+                  </a-tag>
+                </template>
+                <a-descriptions :column="1">
+                  <a-descriptions-item
+                    v-for="slot in page.form.slots"
+                    :key="slot.xpath"
+                    :label="slot.xpath"
+                  >
+                    <LockOutlined v-if="slot.valEnc" />
+                    {{ slot.value }}
+                  </a-descriptions-item>
+                </a-descriptions>
               </a-collapse-panel>
             </a-collapse>
           </div>
@@ -119,7 +190,7 @@
     title="选择框颜色"
     @ok="() => setProp(operas, 'stkClrVsb', false)"
   >
-    <ColorSelect v-model:color="operas.stkColor" />
+    <ColorSelect v-model:color="operas.selStkColor" />
   </a-modal>
 </template>
 
@@ -130,7 +201,9 @@ import Icon, {
   RightOutlined,
   CloseCircleFilled,
   AimOutlined,
-  CloseOutlined
+  CloseOutlined,
+  LockOutlined,
+  UnlockOutlined
 } from '@ant-design/icons-vue'
 import { computed, nextTick, reactive, ref } from 'vue'
 import pgAPI from '@/apis/page'
@@ -147,33 +220,46 @@ type PageEle = {
   rectBox: RectBox
 }
 const slotMapper = new Mapper({
-  inType: {
+  itype: {
     label: '填入方式',
     type: 'Select',
-    options: [{
-      label: '输入',
-      value: 'input'
-    }, {
-      label: '选择',
-      value: 'select'
-    }]
+    options: [
+      {
+        label: '输入',
+        value: 'input'
+      },
+      {
+        label: '选择',
+        value: 'select'
+      },
+      {
+        label: '点击',
+        value: 'click'
+      }
+    ]
   },
-  inValue: {
+  value: {
     label: '填入值',
     type: 'Input'
+  },
+  valEnc: {
+    label: '加密值',
+    type: 'Checkbox',
+    display: false
   }
 })
 
-const form = reactive<{ url: string; slots: any[] }>({
-  url: 'http://218.242.30.111:8096',
-  slots: []
-})
 const page = reactive<{
+  form: { url: string; slots: { xpath: string; value: string; valEnc: boolean }[] }
   elMapper: Record<string, PageEle>
   treeData: TreeProps['treeData']
   expKeys: (string | number)[]
   selKeys: (string | number)[]
 }>({
+  form: {
+    url: 'http://218.242.30.111:8096',
+    slots: []
+  },
   elMapper: {},
   treeData: [],
   expKeys: [],
@@ -182,11 +268,13 @@ const page = reactive<{
 const curUrl = ref('')
 const operas = reactive<{
   locEleMod: boolean
-  stkColor: string
+  selStkColor: string
+  slotStkColor: string
   stkClrVsb: boolean
 }>({
   locEleMod: false,
-  stkColor: 'red',
+  selStkColor: 'red',
+  slotStkColor: 'green',
   stkClrVsb: false
 })
 const collecting = ref(false)
@@ -201,16 +289,22 @@ const selRect = computed<RectBox>(() => {
   if (!page.selKeys.length) {
     return { x: 0, y: 0, width: 0, height: 0 }
   }
+  slotForm.actKey = ['1']
+  const selSlot = page.form.slots.find(slot => slot.xpath === page.selKeys[0])
+  slotForm.value = selSlot ? selSlot.value : ''
+  slotForm.valEnc = selSlot ? selSlot.valEnc : false
   return page.elMapper[page.selKeys[0]].rectBox
 })
 const slotForm = reactive({
-  inType: 'input',
-  inValue: ''
+  actKey: ['1'],
+  itype: 'input',
+  value: '',
+  valEnc: false
 })
 
 async function onPageUpdate() {
   collecting.value = true
-  curUrl.value = form.url
+  curUrl.value = page.form.url
   const result = await pgAPI.colcElements(
     curUrl.value,
     dspPage.value?.getBoundingClientRect() as DOMRect
@@ -262,9 +356,20 @@ function onMouseMove(e: MouseEvent) {
   if (!operas.locEleMod) {
     return
   }
+  const el = poiOnEle(e.offsetX, e.offsetY)
+  page.selKeys = el ? [el.xpath] : []
+}
+function onMouseUp(e: MouseEvent) {
+  if (e.button === 2) {
+    e.preventDefault()
+    const el = poiOnEle(e.offsetX, e.offsetY)
+    page.selKeys = el ? [el.xpath] : []
+  }
+}
+function poiOnEle(x: number, y: number): PageEle | null {
   const els = []
   for (const el of Object.values(page.elMapper)) {
-    if (inRect({ x: e.offsetX, y: e.offsetY }, el.rectBox)) {
+    if (inRect({ x, y }, el.rectBox)) {
       els.push(el)
     }
   }
@@ -278,15 +383,25 @@ function onMouseMove(e: MouseEvent) {
       minRect.el = el
     }
   }
-  if (minRect.el) {
-    page.selKeys = [minRect.el.xpath]
-  }
+  return minRect.el
 }
-function onMouseUp(e: MouseEvent) {
-  if (e.button === 2) {
-    e.preventDefault()
-    page.selKeys = []
+function onSlotSave() {
+  const idSlot = page.form.slots.find(slot => slot.xpath === page.selKeys[0])
+  if (idSlot) {
+    idSlot.value = slotForm.value
+  } else {
+    page.form.slots.push({
+      xpath: page.selKeys[0] as string,
+      value: slotForm.value,
+      valEnc: false
+    })
   }
+  slotForm.itype = 'input'
+  slotForm.value = ''
+  page.selKeys = []
+}
+function onPageSave() {
+  console.log(page.form)
 }
 </script>
 
