@@ -126,7 +126,7 @@
                 </template>
               </a-tree>
             </a-spin>
-            <a-collapse v-model:activeKey="slotForm.actKey" :bordered="false">
+            <a-collapse v-model:activeKey="operas.actKey" :bordered="false">
               <a-collapse-panel v-if="page.selKeys.length" key="1" :header="page.selKeys[0]">
                 <FormGroup
                   layout="vertical"
@@ -169,13 +169,22 @@
                   </a-tag>
                 </template>
                 <a-descriptions :column="1">
-                  <a-descriptions-item
-                    v-for="slot in page.form.slots"
-                    :key="slot.xpath"
-                    :label="slot.xpath"
-                  >
-                    <LockOutlined v-if="slot.valEnc" />
-                    {{ slot.value }}
+                  <a-descriptions-item v-for="slot in page.form.slots" :key="slot.xpath">
+                    <template #label>
+                      <a @click="() => setProp(page, 'selKeys', [slot.xpath])">{{ slot.xpath }}</a>
+                    </template>
+                    <div class="flex-1 flex justify-between">
+                      <span v-if="slot.valEnc">●●●●</span>
+                      <span v-else>{{ slot.value }}</span>
+                      <a-button
+                        size="small"
+                        type="text"
+                        danger
+                        @click="() => onSlotRemove(slot.xpath)"
+                      >
+                        <template #icon><DeleteOutlined /></template>
+                      </a-button>
+                    </div>
                   </a-descriptions-item>
                 </a-descriptions>
               </a-collapse-panel>
@@ -203,16 +212,21 @@ import Icon, {
   AimOutlined,
   CloseOutlined,
   LockOutlined,
-  UnlockOutlined
+  UnlockOutlined,
+  DeleteOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons-vue'
-import { computed, nextTick, reactive, ref } from 'vue'
+import { computed, createVNode, nextTick, onMounted, reactive, ref } from 'vue'
 import pgAPI from '@/apis/page'
-import { TreeProps } from 'ant-design-vue'
+import { Modal, TreeProps } from 'ant-design-vue'
 import ColorSelect from '@lib/components/ColorSelect.vue'
 import { setProp } from '@lib/utils'
 import { RectBox, inRect } from '@/utils'
 import FormGroup from '@lib/components/FormGroup.vue'
 import Mapper from '@lib/types/mapper'
+import mdlAPI from '@/apis/model'
+import { useRoute } from 'vue-router'
+import Page, { Slot } from '@/types/page'
 
 type PageEle = {
   xpath: string
@@ -249,17 +263,15 @@ const slotMapper = new Mapper({
   }
 })
 
+const route = useRoute()
 const page = reactive<{
-  form: { url: string; slots: { xpath: string; value: string; valEnc: boolean }[] }
+  form: Page
   elMapper: Record<string, PageEle>
   treeData: TreeProps['treeData']
   expKeys: (string | number)[]
   selKeys: (string | number)[]
 }>({
-  form: {
-    url: 'http://218.242.30.111:8096',
-    slots: []
-  },
+  form: Page.copy({ url: 'http://218.242.30.111:8096' }),
   elMapper: {},
   treeData: [],
   expKeys: [],
@@ -271,11 +283,13 @@ const operas = reactive<{
   selStkColor: string
   slotStkColor: string
   stkClrVsb: boolean
+  actKey: string[]
 }>({
   locEleMod: false,
   selStkColor: 'red',
   slotStkColor: 'green',
-  stkClrVsb: false
+  stkClrVsb: false,
+  actKey: ['1']
 })
 const collecting = ref(false)
 const dspPage = ref<HTMLIFrameElement | null>(null)
@@ -289,17 +303,22 @@ const selRect = computed<RectBox>(() => {
   if (!page.selKeys.length) {
     return { x: 0, y: 0, width: 0, height: 0 }
   }
-  slotForm.actKey = ['1']
-  const selSlot = page.form.slots.find(slot => slot.xpath === page.selKeys[0])
-  slotForm.value = selSlot ? selSlot.value : ''
-  slotForm.valEnc = selSlot ? selSlot.valEnc : false
+  operas.actKey = ['1']
+  Slot.copy(
+    page.form.slots.find(slot => slot.xpath === page.selKeys[0]),
+    slotForm,
+    true
+  )
+  console.log(slotForm)
   return page.elMapper[page.selKeys[0]].rectBox
 })
-const slotForm = reactive({
-  actKey: ['1'],
-  itype: 'input',
-  value: '',
-  valEnc: false
+const slotForm = reactive<Slot>(new Slot())
+
+onMounted(async () => {
+  if (!route.query.pid) {
+    return
+  }
+  Page.copy(await mdlAPI.get('page', route.query.pid), page.form, true)
 })
 
 async function onPageUpdate() {
@@ -390,18 +409,30 @@ function onSlotSave() {
   if (idSlot) {
     idSlot.value = slotForm.value
   } else {
-    page.form.slots.push({
-      xpath: page.selKeys[0] as string,
-      value: slotForm.value,
-      valEnc: false
-    })
+    page.form.slots.push(Slot.copy(slotForm))
   }
-  slotForm.itype = 'input'
-  slotForm.value = ''
+  slotForm.reset()
   page.selKeys = []
 }
-function onPageSave() {
+async function onPageSave() {
   console.log(page.form)
+  if (!route.query.pid) {
+    return
+  } else {
+    await mdlAPI.add('page', page.form)
+  }
+}
+function onSlotRemove(xpath: string) {
+  Modal.confirm({
+    title: '确定删除该槽？',
+    icon: createVNode(ExclamationCircleOutlined),
+    onOk() {
+      page.form.slots.splice(
+        page.form.slots.findIndex(slot => slot.xpath === xpath),
+        1
+      )
+    }
+  })
 }
 </script>
 
