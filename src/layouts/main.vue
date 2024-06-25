@@ -30,7 +30,7 @@
           <a-menu-item v-for="model in sdNavMdls" :key="model.name">
             {{ model.label }}
           </a-menu-item>
-          <a-menu-item key="newPage">新增页面</a-menu-item>
+          <a-menu-item key="page/n/edit">编辑页面</a-menu-item>
         </a-menu>
       </a-layout-sider>
       <a-layout>
@@ -51,6 +51,7 @@ import models from '@/jsons/models.json'
 import { useRoute } from 'vue-router'
 import { UserOutlined } from '@ant-design/icons-vue'
 import api from '@/apis/model'
+import { rmvStartsOf } from '@lib/utils'
 
 const route = useRoute()
 const sdNavMdls = ref<{ name: string; label: string }[]>([])
@@ -75,11 +76,8 @@ onMounted(async () => {
 router.beforeEach(to => actSideKeys(to.path))
 
 function actSideKeys(path: string) {
-  const paths = path.split('/')
-  sideKeys.splice(0, sideKeys.length, ...paths)
-  if (paths.length) {
-    openKeys.splice(0, openKeys.length, ...paths.slice(0, -1))
-  }
+  const subPath = rmvStartsOf(path, `/${project.name}/`)
+  sideKeys.splice(0, sideKeys.length, subPath)
 }
 function onMuItmSelect(params: SelectInfo) {
   router.push(`/${project.name}/` + (params.keyPath || []).join('/'))

@@ -54,12 +54,13 @@
                       stroke: operas.selStkColor
                     }"
                   />
+
                   <rect
                     v-for="slot in page.form.slots.filter(
                       slot => !page.selKeys.includes(slot.xpath)
                     )"
-                    class="cursor-pointer"
                     :key="slot.xpath"
+                    class="cursor-pointer"
                     :x="page.elMapper[slot.xpath].rectBox.x"
                     :y="page.elMapper[slot.xpath].rectBox.y"
                     :rx="4"
@@ -74,6 +75,24 @@
                     @click="() => setProp(page, 'selKeys', [slot.xpath])"
                   />
                 </svg>
+                <a-tag
+                  v-for="(slot, index) in page.form.slots.filter(
+                    slot => !page.selKeys.includes(slot.xpath)
+                  )"
+                  :key="slot.xpath"
+                  class="absolute cursor-pointer"
+                  :style="{
+                    top: page.elMapper[slot.xpath].rectBox.y + 'px',
+                    right:
+                      page.elMapper[slot.xpath].rectBox.x +
+                      page.elMapper[slot.xpath].rectBox.width +
+                      'px'
+                  }"
+                  :color="operas.slotStkColor"
+                  @click="() => setProp(page, 'selKeys', [slot.xpath])"
+                >
+                  {{ index + 1 }}
+                </a-tag>
               </div>
               <template #overlay>
                 <a-menu>
@@ -216,7 +235,7 @@ import Icon, {
   DeleteOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons-vue'
-import { computed, createVNode, nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, createVNode, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import pgAPI from '@/apis/page'
 import { Modal, TreeProps } from 'ant-design-vue'
 import ColorSelect from '@lib/components/ColorSelect.vue'
@@ -303,23 +322,33 @@ const selRect = computed<RectBox>(() => {
   if (!page.selKeys.length) {
     return { x: 0, y: 0, width: 0, height: 0 }
   }
-  operas.actKey = ['1']
-  Slot.copy(
-    page.form.slots.find(slot => slot.xpath === page.selKeys[0]),
-    slotForm,
-    true
-  )
-  console.log(slotForm)
   return page.elMapper[page.selKeys[0]].rectBox
 })
 const slotForm = reactive<Slot>(new Slot())
 
 onMounted(async () => {
-  if (!route.query.pid) {
+  if (!route.params.pid || route.params.pid === 'n') {
     return
   }
-  Page.copy(await mdlAPI.get('page', route.query.pid), page.form, true)
+  Page.copy(await mdlAPI.get('page', route.params.pid), page.form, true)
 })
+watch(
+  () => page.selKeys,
+  () => {
+    if (!page.selKeys.length) {
+      slotForm.reset()
+      return
+    }
+    Slot.copy(
+      page.form.slots.find(slot => slot.xpath === page.selKeys[0]),
+      slotForm,
+      true
+    )
+    slotForm.xpath = page.selKeys[0] as string
+    operas.actKey = ['1']
+  },
+  { deep: true }
+)
 
 async function onPageUpdate() {
   collecting.value = true
@@ -416,11 +445,12 @@ function onSlotSave() {
 }
 async function onPageSave() {
   console.log(page.form)
-  if (!route.query.pid) {
-    return
+  if (route.query.pid) {
+    await mdlAPI.update('page', route.query.pid, page.form)
   } else {
     await mdlAPI.add('page', page.form)
   }
+  page.form.reset()
 }
 function onSlotRemove(xpath: string) {
   Modal.confirm({

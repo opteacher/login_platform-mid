@@ -28,7 +28,7 @@ const routes: Array<RouteRecordRaw> = [
     meta: { reqLogin: true }
   },
   {
-    path: `/${project.name}/newPage`,
+    path: `/${project.name}/page/:pid/edit`,
     name: 'Page',
     component: Page,
     meta: { reqLogin: true }
