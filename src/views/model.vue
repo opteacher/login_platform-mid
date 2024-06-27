@@ -19,7 +19,15 @@
       :editable="table.operable.includes('可编辑')"
       :addable="table.operable.includes('可增加')"
       :delable="table.operable.includes('可删除')"
-    />
+      @add="() => $router.push(`/${project.name}/page/n/edit`)"
+      @edit="(record: any) => $router.push(`/${project.name}/page/${record.key}/edit`)"
+    >
+      <template #slots="{ record }">
+        <ul class="list-decimal">
+          <li v-for="slot in record.slots" :key="slot.xpath">{{ slot.xpath }}</li>
+        </ul>
+      </template>
+    </EditableTable>
   </MainLayout>
 </template>
 
@@ -32,6 +40,7 @@ import { createByFields } from '@lib/types/mapper'
 import api from '@/apis/model'
 import { genDftFmProps } from '@/utils'
 import Column from '@lib/types/column'
+import project from '@/jsons/project.json'
 
 const route = useRoute()
 const mname = route.params.mname as string

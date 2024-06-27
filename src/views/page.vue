@@ -18,7 +18,13 @@
               跳转
             </a-button>
           </a-input-group>
-          <a-button type="primary" :disabled="collecting" @click="onPageSave">保存</a-button>
+          <a-button
+            type="primary"
+            :disabled="collecting"
+            @click="() => page.emitter.emit('update:visible', true)"
+          >
+            保存
+          </a-button>
         </div>
       </a-layout-header>
       <a-layout class="space-x-3 bg-white">
@@ -220,6 +226,12 @@
   >
     <ColorSelect v-model:color="operas.selStkColor" />
   </a-modal>
+  <FormDialog
+    title="保存页面"
+    :mapper="pageMapper"
+    :emitter="page.emitter"
+    :newFun="() => newOne(Page)"
+  />
 </template>
 
 <script setup lang="ts">
@@ -239,13 +251,15 @@ import { computed, createVNode, nextTick, onMounted, reactive, ref, watch } from
 import pgAPI from '@/apis/page'
 import { Modal, TreeProps } from 'ant-design-vue'
 import ColorSelect from '@lib/components/ColorSelect.vue'
-import { setProp } from '@lib/utils'
+import { newOne, setProp } from '@lib/utils'
 import { RectBox, inRect } from '@/utils'
 import FormGroup from '@lib/components/FormGroup.vue'
 import Mapper from '@lib/types/mapper'
 import mdlAPI from '@/apis/model'
 import { useRoute } from 'vue-router'
 import Page, { Slot } from '@/types/page'
+import FormDialog from '@lib/components/FormDialog.vue'
+import { TinyEmitter } from 'tiny-emitter'
 
 type PageEle = {
   xpath: string
@@ -281,6 +295,13 @@ const slotMapper = new Mapper({
     display: false
   }
 })
+const pageMapper = new Mapper({
+  name: {
+    label: '名称',
+    type: 'Input',
+    rules: [{ required: true, message: '必须填入名称！' }]
+  }
+})
 
 const route = useRoute()
 const page = reactive<{
@@ -289,12 +310,14 @@ const page = reactive<{
   treeData: TreeProps['treeData']
   expKeys: (string | number)[]
   selKeys: (string | number)[]
+  emitter: TinyEmitter
 }>({
   form: Page.copy({ url: 'http://218.242.30.111:8096' }),
   elMapper: {},
   treeData: [],
   expKeys: [],
-  selKeys: []
+  selKeys: [],
+  emitter: new TinyEmitter()
 })
 const curUrl = ref('')
 const operas = reactive<{

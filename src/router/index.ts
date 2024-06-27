@@ -1,11 +1,11 @@
 import axios from 'axios'
 import { makeRequest } from '@lib/utils'
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
-import Model from '@/views/model.vue'
+import Model from '../views/model.vue'
 import login from '../views/login.vue'
 import project from '@/jsons/project.json'
-import Home from '@/views/home.vue'
-import Page from '@/views/page.vue'
+import Home from '../views/home.vue'
+import Page from '../views/page.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
