@@ -6,6 +6,7 @@ import login from '../views/login.vue'
 import project from '@/jsons/project.json'
 import Home from '../views/home.vue'
 import Page from '../views/page.vue'
+import View from '../views/view.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -32,12 +33,17 @@ const routes: Array<RouteRecordRaw> = [
     name: 'Page',
     component: Page,
     meta: { reqLogin: true }
-  }
-  ,
+  },
   {
     path: '/login_platform/login',
     name: 'login',
     component: login
+  },
+  {
+    path: '/login_platform/page/:pid/view',
+    name: 'View',
+    component: View,
+    meta: { reqLogin: true }
   }
 ]
 

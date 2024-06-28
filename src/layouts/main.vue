@@ -31,6 +31,9 @@
             {{ model.label }}
           </a-menu-item>
           <a-menu-item key="page/n/edit">编辑页面</a-menu-item>
+          <a-menu-item v-if="sideKeys.includes('page/n/view')" key="page/n/view">
+            查看页面
+          </a-menu-item>
         </a-menu>
       </a-layout-sider>
       <a-layout>
@@ -77,7 +80,13 @@ router.beforeEach(to => actSideKeys(to.path))
 
 function actSideKeys(path: string) {
   const subPath = rmvStartsOf(path, `/${project.name}/`)
-  sideKeys.splice(0, sideKeys.length, subPath)
+  let fixPath = subPath
+  if (/\/?page\/\d+\/edit$/.test(subPath)) {
+    fixPath = 'page/n/edit'
+  } else if (/\/?page\/\d+\/view$/.test(subPath)) {
+    fixPath = 'page/n/view'
+  }
+  sideKeys.splice(0, sideKeys.length, fixPath)
 }
 function onMuItmSelect(params: SelectInfo) {
   router.push(`/${project.name}/` + (params.keyPath || []).join('/'))

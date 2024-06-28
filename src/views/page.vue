@@ -21,7 +21,7 @@
           <a-button
             type="primary"
             :disabled="collecting"
-            @click="() => page.emitter.emit('update:visible', true)"
+            @click="() => page.emitter.emit('update:visible', { show: true, object: page.form })"
           >
             保存
           </a-button>
@@ -62,11 +62,10 @@
                   />
 
                   <rect
-                    v-for="slot in page.form.slots.filter(
-                      slot => !page.selKeys.includes(slot.xpath)
-                    )"
+                    v-for="slot in page.form.slots"
                     :key="slot.xpath"
                     class="cursor-pointer"
+                    :class="{ invisible: page.selKeys.includes(slot.xpath) }"
                     :x="page.elMapper[slot.xpath].rectBox.x"
                     :y="page.elMapper[slot.xpath].rectBox.y"
                     :rx="4"
@@ -82,11 +81,10 @@
                   />
                 </svg>
                 <a-tag
-                  v-for="(slot, index) in page.form.slots.filter(
-                    slot => !page.selKeys.includes(slot.xpath)
-                  )"
+                  v-for="(slot, index) in page.form.slots"
                   :key="slot.xpath"
                   class="absolute cursor-pointer"
+                  :class="{ invisible: page.selKeys.includes(slot.xpath) }"
                   :style="{
                     top: page.elMapper[slot.xpath].rectBox.y + 'px',
                     right:
@@ -101,8 +99,9 @@
                 </a-tag>
               </div>
               <template #overlay>
-                <a-menu>
+                <a-menu @click="onRgtMnuClick">
                   <a-menu-item key="select">检查</a-menu-item>
+                  <a-menu-item key="clear">清空选择</a-menu-item>
                 </a-menu>
               </template>
             </a-dropdown>
@@ -228,9 +227,11 @@
   </a-modal>
   <FormDialog
     title="保存页面"
+    width="40vw"
     :mapper="pageMapper"
     :emitter="page.emitter"
     :newFun="() => newOne(Page)"
+    @submit="onPageSave"
   />
 </template>
 
@@ -349,12 +350,7 @@ const selRect = computed<RectBox>(() => {
 })
 const slotForm = reactive<Slot>(new Slot())
 
-onMounted(async () => {
-  if (!route.params.pid || route.params.pid === 'n') {
-    return
-  }
-  Page.copy(await mdlAPI.get('page', route.params.pid), page.form, true)
-})
+onMounted(refresh)
 watch(
   () => page.selKeys,
   () => {
@@ -373,9 +369,17 @@ watch(
   { deep: true }
 )
 
-async function onPageUpdate() {
+async function refresh() {
+  if (!route.params.pid || route.params.pid === 'n') {
+    return
+  }
+  const pgInf = await mdlAPI.get('page', route.params.pid)
+  await onPageUpdate(pgInf.url)
+  Page.copy(pgInf, page.form, true)
+}
+async function onPageUpdate(url?: string) {
   collecting.value = true
-  curUrl.value = page.form.url
+  curUrl.value = url || page.form.url
   const result = await pgAPI.colcElements(
     curUrl.value,
     dspPage.value?.getBoundingClientRect() as DOMRect
@@ -466,14 +470,17 @@ function onSlotSave() {
   slotForm.reset()
   page.selKeys = []
 }
-async function onPageSave() {
-  console.log(page.form)
-  if (route.query.pid) {
-    await mdlAPI.update('page', route.query.pid, page.form)
+async function onPageSave({ name }: { name: string }, next: Function) {
+  console.log(name)
+  page.form.name = name
+  if (route.params.pid) {
+    await mdlAPI.update('page', route.params.pid, page.form)
   } else {
     await mdlAPI.add('page', page.form)
   }
   page.form.reset()
+  next()
+  await refresh()
 }
 function onSlotRemove(xpath: string) {
   Modal.confirm({
@@ -486,6 +493,11 @@ function onSlotRemove(xpath: string) {
       )
     }
   })
+}
+function onRgtMnuClick({ key }: { key: 'check' | 'clear' }) {
+  if (key === 'clear') {
+    page.selKeys = []
+  }
 }
 </script>
 

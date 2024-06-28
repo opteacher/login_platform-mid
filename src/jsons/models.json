@@ -77,6 +77,7 @@
           "ftype": "EditList",
           "rules": [],
           "refer": "slots",
+          "display": false,
           "_id": "6615e72a8dea0be27a5edaf6"
         },
         {
@@ -98,11 +99,19 @@
       "operable": ["可增加", "可编辑", "可删除"],
       "imExport": [],
       "columns": [
+        { "title": "名称", "dataIndex": "name", "group": [], "_id": "6615ec218dea0be27a5ee0d7" },
         { "title": "页面URL", "dataIndex": "url", "group": [], "_id": "6615e1c18dea0be27a5ed8f1" },
-        { "title": "填入槽", "dataIndex": "slots", "group": [], "_id": "6615e72a8dea0be27a5edaf7" },
-        { "title": "名称", "dataIndex": "name", "group": [], "_id": "6615ec218dea0be27a5ee0d7" }
+        { "title": "填入槽", "dataIndex": "slots", "group": [], "_id": "6615e72a8dea0be27a5edaf7" }
       ],
       "cells": [
+        {
+          "refer": "name",
+          "cdCell": {},
+          "color": "#000000",
+          "prefix": "",
+          "suffix": "",
+          "_id": "6615ec218dea0be27a5ee0e5"
+        },
         {
           "refer": "url",
           "cdCell": {},
@@ -118,14 +127,6 @@
           "prefix": "",
           "suffix": "",
           "_id": "6615e72a8dea0be27a5edb01"
-        },
-        {
-          "refer": "name",
-          "cdCell": {},
-          "color": "#000000",
-          "prefix": "",
-          "suffix": "",
-          "_id": "6615ec218dea0be27a5ee0e5"
         }
       ],
       "_id": "6614eaf08dea0be27a5eaf90"
