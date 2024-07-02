@@ -17,6 +17,10 @@ export default ({ mode }) => defineConfig({
       [`^/${project.name}/(mdl|api)`]: {
         target: 'http://218.242.30.111:6031',
         changeOrigin: true
+      },
+      '^/json/version$': {
+        target: 'http://127.0.0.1:9222',
+        changeOrigin: true
       }
     }
   },

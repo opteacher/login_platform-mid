@@ -23,9 +23,6 @@
       @edit="(record: any) => $router.push(`/${project.name}/page/${record.id}/edit`)"
     >
       <template v-if="$route.path === `/${project.name}/page`" #slots="{ record }">
-        <!-- <ul class="list-decimal mb-0">
-          <li v-for="slot in record.slots" :key="slot.xpath">{{ slot.xpath }}</li>
-        </ul> -->
         <a-table
           class="slot-table"
           size="small"
@@ -71,6 +68,9 @@ import api from '@/apis/model'
 import { genDftFmProps } from '@/utils'
 import Column from '@lib/types/column'
 import project from '@/jsons/project.json'
+import puppeteer from 'puppeteer-core'
+import axios from 'axios'
+import { notification } from 'ant-design-vue'
 import Page from '@/types/page'
 
 const route = useRoute()
@@ -81,8 +81,22 @@ const columns = table.columns.map((col: any) => Column.copy(col))
 const mapper = createByFields(model.form.fields)
 const emitter = new Emitter()
 
-function onLgnPgClick(page: Page) {
-  console.log(page)
+async function onLgnPgClick(pgInfo: Page) {
+  const resp = await axios.get('/json/version')
+  if (resp.status !== 200) {
+    notification.error({
+      message: '无法获取浏览器WS端点',
+      description: 'Chrome快捷方式–右键属性–目标 在最后添加【--remote-debugging-port=9222】参数'
+    })
+    return
+  }
+  const browserWSEndpoint = resp.data.webSocketDebuggerUrl
+  const browser = await puppeteer.connect({ browserWSEndpoint })
+  const page = await browser.newPage()
+  // await Promise.all([
+  //   page.goto(pgInfo.url),
+  //   page.waitForNavigation()
+  // ])
 }
 </script>
 
