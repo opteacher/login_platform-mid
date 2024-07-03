@@ -95,11 +95,15 @@ async function onLgnPgClick(pgInfo: Page) {
     })
     return
   }
-  const url = new URL(resp.data.webSocketDebuggerUrl)
-  const browserWSEndpoint = url.pathname
-  const browser = await puppeteer.connect({ browserWSEndpoint })
-  const page = await browser.newPage()
-  await Promise.all([page.goto(pgInfo.url), page.waitForNavigation()])
+  const browserWSEndpoint = new URL(resp.data.webSocketDebuggerUrl)
+  const ws = new WebSocket(browserWSEndpoint)
+  ws.onopen = () => console.log('WS通讯开启！')
+  ws.onclose = (e) => console.log('WS通讯关闭！', e.code, e.reason)
+  ws.onmessage = (e) => console.log('WS收到消息！', e.data)
+  ws.onerror = (e) => console.log('WS通讯失败！', e)
+  // const browser = await puppeteer.connect({ browserWSEndpoint })
+  // const page = await browser.newPage()
+  // await Promise.all([page.goto(pgInfo.url), page.waitForNavigation()])
 }
 </script>
 

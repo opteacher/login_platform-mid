@@ -5,7 +5,7 @@ const ignTags = ['style', 'script', 'link', 'meta', 'head', 'header', 'title']
 //   executablePath: 'C:\\Users\\shines\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe'
 //   // args: ['--no-sandbox', '--disable-setuid-sandbox']
 // })
-const browserWSEndpoint = 'ws://localhost:5173/devtools/browser/e62260d8-3ee8-4250-9c81-7cb706d636bb'
+const browserWSEndpoint = 'ws://localhost:9222/devtools/browser/e83ab90c-4c67-44f5-9c41-5ec3b6fd3929'
 const browser = await puppeteer.connect({ browserWSEndpoint })
 const page = await browser.newPage()
 let width = 990,
@@ -15,7 +15,7 @@ await page.setViewport({
   height
 })
 page.on('console', msg => console.log(msg.text()))
-await Promise.all([page.waitForNavigation(), page.goto('http://192.168.1.12:8096')])
+await Promise.all([page.waitForNavigation(), page.goto('http://218.242.30.111:8096')])
 await page.content()
 await page.waitForNetworkIdle()
 console.log(await page.$eval('body', body => body.scrollHeight))
