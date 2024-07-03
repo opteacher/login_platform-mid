@@ -1,10 +1,12 @@
 import puppeteer from 'puppeteer-core'
 
 const ignTags = ['style', 'script', 'link', 'meta', 'head', 'header', 'title']
-const browser = await puppeteer.launch({
-  executablePath: 'C:\\Users\\shines\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe'
-  // args: ['--no-sandbox', '--disable-setuid-sandbox']
-})
+// const browser = await puppeteer.launch({
+//   executablePath: 'C:\\Users\\shines\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe'
+//   // args: ['--no-sandbox', '--disable-setuid-sandbox']
+// })
+const browserWSEndpoint = 'ws://localhost:5173/devtools/browser/e62260d8-3ee8-4250-9c81-7cb706d636bb'
+const browser = await puppeteer.connect({ browserWSEndpoint })
 const page = await browser.newPage()
 let width = 990,
   height = 550
@@ -56,4 +58,4 @@ console.log(await page.$eval('body', body => body.scrollHeight))
 //   )
 // }
 
-await browser.close()
+// await browser.close()

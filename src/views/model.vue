@@ -68,7 +68,7 @@ import api from '@/apis/model'
 import { genDftFmProps } from '@/utils'
 import Column from '@lib/types/column'
 import project from '@/jsons/project.json'
-import puppeteer from 'puppeteer-core'
+import puppeteer from 'puppeteer-core/lib/esm/puppeteer/puppeteer-core-browser.js'
 import axios from 'axios'
 import { notification } from 'ant-design-vue'
 import Page from '@/types/page'
@@ -82,21 +82,24 @@ const mapper = createByFields(model.form.fields)
 const emitter = new Emitter()
 
 async function onLgnPgClick(pgInfo: Page) {
-  const resp = await axios.get('/json/version')
+  let resp = null
+  try {
+    resp = await axios.get('/json/version')
   if (resp.status !== 200) {
+    throw new Error()
+  }
+  } catch(e) {
     notification.error({
       message: '无法获取浏览器WS端点',
       description: 'Chrome快捷方式–右键属性–目标 在最后添加【--remote-debugging-port=9222】参数'
     })
     return
   }
-  const browserWSEndpoint = resp.data.webSocketDebuggerUrl
+  const url = new URL(resp.data.webSocketDebuggerUrl)
+  const browserWSEndpoint = url.pathname
   const browser = await puppeteer.connect({ browserWSEndpoint })
   const page = await browser.newPage()
-  // await Promise.all([
-  //   page.goto(pgInfo.url),
-  //   page.waitForNavigation()
-  // ])
+  await Promise.all([page.goto(pgInfo.url), page.waitForNavigation()])
 }
 </script>
 

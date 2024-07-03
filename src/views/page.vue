@@ -13,7 +13,7 @@
               <template #prefix><RightOutlined /></template>
               <template #clearIcon><CloseCircleFilled @click="onFmUrlClear" /></template>
             </a-input>
-            <a-button @click="onPageUpdate" :loading="collecting">
+            <a-button @click="() => onPageUpdate()" :loading="collecting">
               <template #icon><SendOutlined /></template>
               跳转
             </a-button>
