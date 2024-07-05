@@ -5,7 +5,7 @@ const ignTags = ['style', 'script', 'link', 'meta', 'head', 'header', 'title']
 //   executablePath: 'C:\\Users\\shines\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe'
 //   // args: ['--no-sandbox', '--disable-setuid-sandbox']
 // })
-const browserWSEndpoint = 'ws://localhost:9222/devtools/browser/e83ab90c-4c67-44f5-9c41-5ec3b6fd3929'
+const browserWSEndpoint = 'ws://127.0.0.1:9222/devtools/browser/51c0c35e-6519-4b54-89ee-683e8cae3e56'
 const browser = await puppeteer.connect({ browserWSEndpoint })
 const page = await browser.newPage()
 let width = 990,

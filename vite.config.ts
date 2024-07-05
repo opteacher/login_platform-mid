@@ -13,6 +13,11 @@ export default ({ mode }) =>
         '@lib': fileURLToPath(new URL('./lib/frontend-library/src', import.meta.url))
       }
     },
+    build: {
+      rollupOptions: {
+        external: ['debug', 'stream', 'child_process']
+      }
+    },
     server: {
       proxy: {
         [`^/${project.name}/(mdl|api)`]: {
@@ -24,7 +29,7 @@ export default ({ mode }) =>
           changeOrigin: true
         },
         '/devtools/browser': {
-          target: 'ws://127.0.0.1:9222',
+          target: 'ws://localhost:9222',
           changeOrigin: true,
           ws: true
         }

@@ -22,4 +22,6 @@ axios.interceptors.request.use(
   }
 )
 
+axios.defaults.baseURL = import.meta.env.PROD ? 'http://218.242.30.111:6031' : undefined
+
 createApp(App).use(router).use(Antd).use(MyLib).use(createPinia()).mount('#app')

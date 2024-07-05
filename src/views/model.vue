@@ -19,6 +19,7 @@
       :editable="table.operable.includes('可编辑')"
       :addable="table.operable.includes('可增加')"
       :delable="table.operable.includes('可删除')"
+      :clkable="false"
       @add="() => $router.push(`/${project.name}/page/n/edit`)"
       @edit="(record: any) => $router.push(`/${project.name}/page/${record.id}/edit`)"
     >
@@ -84,26 +85,24 @@ const emitter = new Emitter()
 async function onLgnPgClick(pgInfo: Page) {
   let resp = null
   try {
-    resp = await axios.get('/json/version')
-  if (resp.status !== 200) {
-    throw new Error()
-  }
-  } catch(e) {
+    resp = await axios.get('/json/version', {
+      baseURL: import.meta.env.PROD ? 'http://127.0.0.1:9222' : undefined
+    })
+    if (resp.status !== 200) {
+      throw new Error()
+    }
+  } catch (e) {
     notification.error({
       message: '无法获取浏览器WS端点',
       description: 'Chrome快捷方式–右键属性–目标 在最后添加【--remote-debugging-port=9222】参数'
     })
     return
   }
-  const browserWSEndpoint = new URL(resp.data.webSocketDebuggerUrl)
-  const ws = new WebSocket(browserWSEndpoint)
-  ws.onopen = () => console.log('WS通讯开启！')
-  ws.onclose = (e) => console.log('WS通讯关闭！', e.code, e.reason)
-  ws.onmessage = (e) => console.log('WS收到消息！', e.data)
-  ws.onerror = (e) => console.log('WS通讯失败！', e)
-  // const browser = await puppeteer.connect({ browserWSEndpoint })
-  // const page = await browser.newPage()
-  // await Promise.all([page.goto(pgInfo.url), page.waitForNavigation()])
+  console.log(resp.data)
+  const browserWSEndpoint = resp.data.webSocketDebuggerUrl
+  const browser = await puppeteer.connect({ browserWSEndpoint })
+  const page = await browser.newPage()
+  await Promise.all([page.goto(pgInfo.url), page.waitForNavigation()])
 }
 </script>
 
